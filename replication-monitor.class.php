@@ -1772,7 +1772,7 @@ class Replication
             return false;
         }
 
-        $this->conn[$serverId] = mysqli_connect($currentServer['host'], $currentServer['user'], $currentServer['pwd']);
+        $this->conn[$serverId] = mysqli_connect($currentServer['host'], $currentServer['user'], $currentServer['pwd'], '', $currentServer['port']);
 
         if (!$this->conn[$serverId]) {
 
@@ -1783,7 +1783,7 @@ class Replication
             return false;
         }
 
-        $this->addToDebugs("Connected to <b>{$serverId}</b> using {$currentServer['user']}@{$currentServer['host']}.");
+        $this->addToDebugs("Connected to <b>{$serverId}</b> using {$currentServer['user']}@{$currentServer['host']}:{$currentServer['port']}.");
 
         return true;
     }
