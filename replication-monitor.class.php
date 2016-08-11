@@ -1,6 +1,5 @@
 <?php
 
-include_once(dirname(__FILE__) . '/Libs/Mysqldump.php');
 include_once(dirname(__FILE__) . '/Libs/PHPMailer/PHPMailerAutoload.php');
 
 /**
