@@ -1074,7 +1074,8 @@ class Replication
 						</li>
 						<li>
 						    <!-- TODO: Add help page and link it here -->
-							<a href="#"
+							<a href="https://github.com/Co0olCat/SRaM#readme"
+							   target="_blank"
 							   title="Click to see help @GitHub">Help</a>
 						</li>						
 					</ul>			
