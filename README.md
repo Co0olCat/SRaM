@@ -1,6 +1,8 @@
 # SRaM
 MySQL Simple ReplicAtion Monitor
 
+![alt tag](https://github.com/Co0olCat/SRaM/blob/master/SRaM.png)
+
 # Use it at your own risk!
 
 #KUDOS
