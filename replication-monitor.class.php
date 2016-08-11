@@ -819,7 +819,10 @@ class Replication
                         <meta http-equiv="X-UA-Compatible" content="IE=edge">
                         <meta name="viewport" content="width=device-width, initial-scale=1">
                         <meta name="description" content="Simple ReplicAtion Monitor">
-                        <meta name="author" content="WhatAboutYou">
+                        <meta name="author" content="Co0olCat">
+                        
+                        <link rel="icon" href="favicon.ico" type="image/x-icon" />
+                        <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
                 
                         <title>Simple ReplicAiton Monitor</title>
                         
@@ -1054,14 +1057,13 @@ class Replication
                     <div class="col-md-2"></div>
                     <div class="col-md-8">
                         <div class="navbar-header">
-                             
-                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-                                 <span class="sr-only">Toggle navigation</span><span class="icon-bar"></span>
-                                 <span class="icon-bar"></span>
-                                 <span class="icon-bar"></span>
-                            </button> <a class="navbar-brand" 
-                                         href=""
-                                         title="Simple ReplicAtion Monitor">SRaM</a>
+                        
+                            <a class="">
+                                <img alt="SRaM" 
+                                     src="sram.50.png" 
+                                     href=""
+                                     title="Simple ReplicAtion Monitor">
+                            </a>
                         </div>                
 				
 				    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
