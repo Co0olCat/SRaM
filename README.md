@@ -25,13 +25,16 @@ by 2010 Alan Blount (alan[at]zeroasterisk[dot]com). Thank you for your great wor
 1. Monitor MySQL replication status using web interface.
 2. Monitor MySQL replication using cron > Send email if issues are detected.
 3. Monitor and heal MySQL replication using cron > Send email if issues are detected > Report progress of healing.
+4. Passive (Slave status) and active (add record to replicated DB and record time of propagation to Slave from Master).
 
 # Installation
 1. Get index.php, cron.php, replication-monitor.class.php and config.php to your internal server.
    Note: Web interface is not protected - anyone can stop/break replication using SRaM.
 2. Download https://github.com/PHPMailer/PHPMailer and extract to Libs directory.
 3. Configure email settings, topologies and other settings in config.php.
-4. Add cron task to access cron.php at predefined intervals.
-5. Complain, patch and share your improvements 8)
+4. Make sure DB credentials have create db/table, update and delete.
+5. Add "util_replication" (or defined in config.php) to a list of replicated data bases.
+6. Add cron task to access cron.php at predefined intervals.
+7. Complain, patch and share your improvements 8)
 
 # Use it at your own risk! 
