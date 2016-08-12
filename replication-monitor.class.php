@@ -1466,8 +1466,8 @@ class Replication
 								<th style="text-align: center">Check</th>								
 								<th style="text-align: center">Master</th>
 								<th style="text-align: center">Health</th>
-								<th style="text-align: center">Behind</th>
-								<th style="text-align: center">Check Lag</th>
+								<th style="text-align: center">(P)Behind</th>
+								<th style="text-align: center">(A)Check Lag</th>
 								<th style="text-align: center">GTID</th>								
 								<th style="text-align: center">Slave</th>								
 								<th style="text-align: center">Actions</th>
@@ -1510,19 +1510,26 @@ class Replication
             $replicationLag = "";
 
             if (empty($slaveStatus)) {
-                $replicationHealth .= "<span class='glyphicon glyphicon-ban-circle alert-danger' aria-hidden='true'></span>";
+                $replicationHealth .= "<span class='glyphicon glyphicon-ban-circle alert-danger' 
+                                             aria-hidden='true'
+                                             title='There are issues with replication'></span>";
             } else {
 
                 if (!is_null($slaveStatus[0]['Seconds_Behind_Master'])) {
-                    $replicationHealth .= "<span class='glyphicon glyphicon-heart alert-success' aria-hidden='true'></span>";
+                    $replicationHealth .= "<span class='glyphicon glyphicon-heart alert-success' 
+                                                 aria-hidden='true'
+                                                 title='Replication looks to be healthy'></span>";
+
                     $replicationBehind .= " {$slaveStatus[0]['Seconds_Behind_Master']} sec(s)";
                 } else {
-                    $replicationHealth .= "<span class='glyphicon glyphicon-heart alert-danger' aria-hidden='true'></span>";
+                    $replicationHealth .= "<span class='glyphicon glyphicon-heart alert-danger' 
+                                                 aria-hidden='true'
+                                                 title='There are issues with replication'></span>";
                 }
             }
 
             if ($topology['active_check']) {
-                $checkType = "<span style='color: #1dc116'>A</span>C";
+                $checkType = "<div title='Active Check'><span style='color: #1dc116'>A</span>C</div>";
 
                 // Check active replication
                 $activeCheckResult = $this->testActiveReplication($topology['master_server_unique_id'], $topology['slave_server_unique_id']);
@@ -1530,14 +1537,16 @@ class Replication
                 if ($activeCheckResult < 0) {
                     $replicationHealth = "<span class='glyphicon glyphicon-ban-circle alert-danger' 
                                                 aria-hidden='true'
-                                                title='Failed active check'></span>";
+                                                title='Replication has failed active check'></span>";
                 } else {
-                    $replicationHealth = "<span class='glyphicon glyphicon-heart alert-success' aria-hidden='true'></span>";
-                    $replicationLag .= " {$slaveStatus[0]['Seconds_Behind_Master']}..{$activeCheckResult} sec(s)";
+                    $replicationHealth = "<span class='glyphicon glyphicon-heart alert-success' 
+                                                aria-hidden='true'
+                                                title='Replication has passed active check'></span>";
+                    $replicationLag .= "{$activeCheckResult} sec(s)";
                 }
 
             } else {
-                $checkType = "<span style='color: #4a8cdb'>P</span>C";
+                $checkType = "<div title='Passive Check'><span style='color: #4a8cdb'>P</span>C</div>";
             }
 
             $gtidMode = "";
@@ -1605,6 +1614,7 @@ class Replication
                                        role='button' 
                                        class='btn btn-default btn-xs' 
                                        style='width: 100%'
+                                       title='Click to see status'
                                        data-toggle='modal'>{$topology['master_server_unique_id']}</a>
                                 </td>
                                 <td style='text-align: center'>{$replicationHealth}</td>
@@ -1617,6 +1627,7 @@ class Replication
                                        role='button' 
                                        class='btn btn-default btn-xs {$buttonStyle}'
                                        style='width: 100%'
+                                       title='Click to see status'
                                        data-toggle='modal'>{$topology['slave_server_unique_id']}</a>
                                 </td>                                
                                 <td style='text-align: center'>
