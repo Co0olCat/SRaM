@@ -1073,8 +1073,7 @@ class Replication
 							   data-toggle="modal"
 							   title="Click to see settings">Settings</a>
 						</li>
-						<li>
-						    <!-- TODO: Add help page and link it here -->
+						<li>						    
 							<a href="https://github.com/Co0olCat/SRaM#readme"
 							   target="_blank"
 							   title="Click to see help @GitHub">Help</a>
@@ -1441,11 +1440,11 @@ class Replication
                 }
             }
 
-            $masterGlobalGTIDMode = $this->query($topology['master_server_unique_id'], "SELECT @@GLOBAL.GTID_MODE;");
-            $slaveGlobalGTIDMode = $this->query($topology['slave_server_unique_id'], "SELECT @@GLOBAL.GTID_MODE;");
+            $masterGlobalGTIDMode = $this->query($topology['master_server_unique_id'], "SELECT `variable_value` FROM `information_schema`.`global_variables` WHERE VARIABLE_NAME = 'gtid_mode';");
+            $slaveGlobalGTIDMode = $this->query($topology['slave_server_unique_id'], "SELECT `variable_value` FROM `information_schema`.`global_variables` WHERE VARIABLE_NAME = 'gtid_mode';");
 
 
-            if ($masterGlobalGTIDMode != $slaveGlobalGTIDMode) {
+            if ($masterGlobalGTIDMode[0]["variable_value"] != $slaveGlobalGTIDMode[0]["variable_value"]) {
                 $errors[] = "Master <b>{$topology['master_server_unique_id']}</b> and Slave <b>{$topology['slave_server_unique_id']}</b> have different GTID modes: {$masterGlobalGTIDMode} != {$slaveGlobalGTIDMode}.";
             }
         }
@@ -1541,15 +1540,15 @@ class Replication
                 $checkType = "<span style='color: #4a8cdb'>P</span>C";
             }
 
-            $masterGlobalGTIDMode = $this->query($topology['master_server_unique_id'], "SELECT @@GLOBAL.GTID_MODE;");
-            $slaveGlobalGTIDMode = $this->query($topology['slave_server_unique_id'], "SELECT @@GLOBAL.GTID_MODE;");
+            $gtidMode = "";
+
+            $masterGlobalGTIDMode = $this->query($topology['master_server_unique_id'], "SELECT `variable_value` FROM `information_schema`.`global_variables` WHERE VARIABLE_NAME = 'gtid_mode';");
+            $slaveGlobalGTIDMode = $this->query($topology['slave_server_unique_id'], "SELECT `variable_value` FROM `information_schema`.`global_variables` WHERE VARIABLE_NAME = 'gtid_mode';");
 
             // Parse GTID modes
 
-            $gtidMode = "";
-
-            if (isset($masterGlobalGTIDMode[0]["@@GLOBAL.GTID_MODE"])) {
-                if ($masterGlobalGTIDMode[0]["@@GLOBAL.GTID_MODE"] == "ON") {
+            if (isset($masterGlobalGTIDMode[0]["variable_value"])) {
+                if ($masterGlobalGTIDMode[0]["variable_value"] == "ON") {
                     $gtidMode .= "<a
                                         type='button'
                                         style='color: green;'
@@ -1572,8 +1571,8 @@ class Replication
                 }
             }
 
-            if (isset($slaveGlobalGTIDMode[0]["@@GLOBAL.GTID_MODE"])) {
-                if ($slaveGlobalGTIDMode[0]["@@GLOBAL.GTID_MODE"] == "ON") {
+            if (isset($slaveGlobalGTIDMode[0]["variable_value"])) {
+                if ($slaveGlobalGTIDMode[0]["variable_value"] == "ON") {
                     $gtidMode .= "<a
                                         type='button'
                                         style='color: green;'
@@ -1973,18 +1972,15 @@ class Replication
         $result = mysqli_query($this->conn[$key], $sql);
 
         if (!$result) {
-            $this->addToErrors("Could not successfully run query [$key] {{{ $sql }}} - " . mysqli_error() . "[" . mysqli_errno() . "]");
-            //$this->addToDebugs("query-return: error: " . $error);
+            $this->addToErrors("Could not successfully run query [$key] {{$sql}} - " . mysqli_error() . "[" . mysqli_errno() . "]");
 
             return false;
         }
 
         if (strtolower(substr($sql, 0, 6)) == "insert") {
-            //$result = mysqli_affected_rows($this->conn[$key]);
-            //$result = mysqli_commit($this->conn[$key]);
 
             $return = mysqli_insert_id($this->conn[$key]);
-            //$this->addToDebugs("query-return: mysql_insert_id: $return");
+
 
             return $return;
         }
@@ -1993,13 +1989,11 @@ class Replication
             in_array(strtolower(substr($sql, 0, 5)), array("start", "reset", "stop ", "set g", "load "))
         ) {
             $return = mysqli_affected_rows($this->conn[$key]);
-            //$this->addToDebugs("query-return: mysql_affected_rows: $return");
 
             return $return;
         }
 
         if (mysqli_num_rows($result) == 0) {
-            //$this->addToDebugs("query-return: No rows found: return: array()");
 
             return array();
         }
@@ -2011,7 +2005,6 @@ class Replication
         }
 
         mysqli_free_result($result);
-        //$this->addToDebugs("<i>	query-return: data:</i> " . var_export($return, true));
 
         return $return;
     }
