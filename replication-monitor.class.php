@@ -953,6 +953,56 @@ class Replication
 							<td>{$this->cfg['SecondsToFail']}</td>								
                         </tr>";
 
+        // Logging settings
+        $i++;
+        $htmlContent .= "<tr>
+                            <td>{$i}</td>
+							<td>Log::db</td>
+							<td>{$this->cfg['Log']['db']}</td>								
+                        </tr>";
+
+        $i++;
+        $htmlContent .= "<tr>
+                            <td>{$i}</td>
+							<td>Log::unique_id</td>
+							<td>{$this->cfg['Log']['unique_id']}</td>								
+                        </tr>";
+
+        $i++;
+        $htmlContent .= "<tr>
+                            <td>{$i}</td>
+							<td>Log::record_debugs</td>
+							<td>{$this->cfg['Log']['record_debugs']}</td>								
+                        </tr>";
+
+        $i++;
+        $htmlContent .= "<tr>
+                            <td>{$i}</td>
+							<td>Log::email_freq_minutes</td>
+							<td>{$this->cfg['Log']['email_freq_minutes']}</td>								
+                        </tr>";
+
+        $i++;
+        $htmlContent .= "<tr>
+                            <td>{$i}</td>
+							<td>Log::max_healing_per_email_freq</td>
+							<td>{$this->cfg['Log']['max_healing_per_email_freq']}</td>								
+                        </tr>";
+
+        $i++;
+        $htmlContent .= "<tr>
+                            <td>{$i}</td>
+							<td>Log::daily_report</td>
+							<td>{$this->cfg['Log']['daily_report']}</td>								
+                        </tr>";
+
+        $i++;
+        $htmlContent .= "<tr>
+                            <td>{$i}</td>
+							<td>Log::weekly_report</td>
+							<td>{$this->cfg['Log']['weekly_report']}</td>								
+                        </tr>";
+
         // PHPMailer
         foreach ($this->cfg['PHPMailer'] As $key => $value) {
             $i++;
@@ -1330,7 +1380,6 @@ class Replication
         }
 
 
-
         $htmlAlerts .= '					
 				</div>
 			</div>
@@ -1443,10 +1492,24 @@ class Replication
             $masterGlobalGTIDMode = $this->query($topology['master_server_unique_id'], "SELECT `variable_value` FROM `information_schema`.`global_variables` WHERE VARIABLE_NAME = 'gtid_mode';");
             $slaveGlobalGTIDMode = $this->query($topology['slave_server_unique_id'], "SELECT `variable_value` FROM `information_schema`.`global_variables` WHERE VARIABLE_NAME = 'gtid_mode';");
 
-
-            if ($masterGlobalGTIDMode[0]["variable_value"] != $slaveGlobalGTIDMode[0]["variable_value"]) {
-                $errors[] = "Master <b>{$topology['master_server_unique_id']}</b> and Slave <b>{$topology['slave_server_unique_id']}</b> have different GTID modes: {$masterGlobalGTIDMode} != {$slaveGlobalGTIDMode}.";
+            // Report error only if it set both on Master and Slave
+            if (isset($masterGlobalGTIDMode[0]["variable_value"])
+                && isset($slaveGlobalGTIDMode[0]["variable_value"])
+            ) {
+                if ($masterGlobalGTIDMode[0]["variable_value"] != $slaveGlobalGTIDMode[0]["variable_value"]) {
+                    $errors[] = "Master <b>{$topology['master_server_unique_id']}</b> and Slave <b>{$topology['slave_server_unique_id']}</b> have different GTID modes: {$masterGlobalGTIDMode[0]['variable_value']} != {$slaveGlobalGTIDMode[0]['variable_value']}.";
+                }
             }
+        }
+
+        // Report daily if enables
+        if ($this->cfg['Log']['daily_report']) {
+            $this->reportDailyViaEmail();
+        }
+
+        // Report weekly if enables
+        if ($this->cfg['Log']['weekly_report']) {
+            $this->reportWeeklyViaEmail();
         }
 
         return $errors;
@@ -2020,7 +2083,8 @@ class Replication
         return $return;
     }
 
-    function reportErrorsViaEmail($errors) {
+    function reportErrorsViaEmail($errors)
+    {
 
         $errorsCount = count($errors);
 
@@ -2084,7 +2148,231 @@ class Replication
         }
     }
 
-    function reportHealingViaEmail($healing, $errors, $emailsCount) {
+    function reportDailyViaEmail()
+    {
+
+        // Get the last date of report
+        $logDB = $this->cfg['Log']['db'];
+        $serverId = $this->cfg['Log']['unique_id'];
+
+        $sql = "SELECT now() - max(`timestamp`) AS elapsed_secs,
+                max(`timestamp`) AS last_report_date
+                FROM `{$logDB}`.`emails` 
+                WHERE `message_type` = 'daily_report'; ";
+
+        $latestTimestamp = $this->query($serverId, $sql, $logDB, false);
+
+        if (is_null($latestTimestamp[0]['elapsed_secs'])
+            || $latestTimestamp[0]['elapsed_secs'] > 86400
+        ) {
+            // Form email
+            $condition = " ";
+
+            if (!is_null($latestTimestamp[0]['last_report_date'])) {
+                $condition .= " WHERE `timestamp` >= '{$latestTimestamp[0]['last_report_date']}'";
+            }
+
+            $subject = "Daily SRaM Report for " . date("Y-m-d");
+
+            $message = "<h2>Daily Report</h2>";
+
+            // Get errors
+            $sql = "SELECT DATE_FORMAT(`timestamp`, '%Y-%m-%d:%H') AS `timestamp`, `event` FROM `{$logDB}`.`timeline` ";
+            $sql .= $condition;
+
+            $recordedErrors = $this->query($serverId, $sql, $logDB, false);
+
+            if (count($recordedErrors) > 0) {
+
+                $pivotTable = $this->renderPivotTable($recordedErrors);
+
+
+                $message .= "<h3>Recorded Errors:</h3>";
+
+                $message .= $pivotTable;
+            } else {
+                $message .= "<h3>No Recorded Errors</h3>";
+            }
+
+            // Get messages
+            $sql = "SELECT DATE_FORMAT(`timestamp`, '%Y-%m-%d:%H') AS `timestamp`, concat(`status`, '::', `message_type`, '::', `subject`) AS `event` FROM `{$logDB}`.`emails` ";
+            $sql .= $condition;
+
+            $recordedMessages = $this->query($serverId, $sql, $logDB, false);
+
+            if (count($recordedMessages) > 0) {
+
+                $pivotTable = $this->renderPivotTable($recordedMessages);
+
+
+                $message .= "<h3>Recorded Messages:</h3>";
+
+                $message .= $pivotTable;
+            } else {
+                $message .= "<h3>No Recorded Messages</h3>";
+            }
+
+
+            $emailHash = md5($subject . $message);
+
+            $this->sendMailSSL("daily_report", $subject, $message, $emailHash);
+        }
+    }
+
+    function reportWeeklyViaEmail()
+    {
+        // Get the last date of report
+        $logDB = $this->cfg['Log']['db'];
+        $serverId = $this->cfg['Log']['unique_id'];
+
+        $sql = "SELECT now() - max(`timestamp`) AS elapsed_secs,
+                max(`timestamp`) AS last_report_date
+                FROM `{$logDB}`.`emails` 
+                WHERE `message_type` = 'weekly_report'; ";
+
+        $latestTimestamp = $this->query($serverId, $sql, $logDB, false);
+
+        if (is_null($latestTimestamp[0]['elapsed_secs'])
+            || $latestTimestamp[0]['elapsed_secs'] > 604800
+        ) {
+            // Form email
+            $condition = " ";
+
+            if (!is_null($latestTimestamp[0]['last_report_date'])) {
+                $condition .= " WHERE `timestamp` >= '{$latestTimestamp[0]['last_report_date']}'";
+            }
+
+            $subject = "Weekly SRaM Report from " . date("Y-m-d", strtotime('-1 week')) . " to " . date("Y-m-d");
+
+            $message = "<h2>Weekly Report</h2>";
+
+            // Get errors
+            $sql = "SELECT DATE_FORMAT(`timestamp`, '%Y-%m-%d') AS `timestamp`, `event` FROM `{$logDB}`.`timeline` ";
+            $sql .= $condition;
+
+            $recordedErrors = $this->query($serverId, $sql, $logDB, false);
+
+            if (count($recordedErrors) > 0) {
+
+                $pivotTable = $this->renderPivotTable($recordedErrors);
+
+
+                $message .= "<h3>Recorded Errors:</h3>";
+
+                $message .= $pivotTable;
+            } else {
+                $message .= "<h3>No Recorded Errors</h3>";
+            }
+
+            // Get messages
+            $sql = "SELECT DATE_FORMAT(`timestamp`, '%Y-%m-%d') AS `timestamp`, concat(`status`, '::', `message_type`, '::', `subject`) AS `event` FROM `{$logDB}`.`emails` ";
+            $sql .= $condition;
+
+            $recordedMessages = $this->query($serverId, $sql, $logDB, false);
+
+            if (count($recordedMessages) > 0) {
+
+                $pivotTable = $this->renderPivotTable($recordedMessages);
+
+
+                $message .= "<h3>Recorded Messages:</h3>";
+
+                $message .= $pivotTable;
+            } else {
+                $message .= "<h3>No Recorded Messages</h3>";
+            }
+
+
+            $emailHash = md5($subject . $message);
+
+            $this->sendMailSSL("weekly_report", $subject, $message, $emailHash);
+        }
+    }
+
+    function renderPivotTable($events = array())
+    {
+        $table = array(); // Will hold pivot array
+        $rowNames = array(); // Will hold names and totals for each row
+        $colNames = array(); // Will hold names and totals for each column
+
+        foreach ($events as $event) {
+
+            if (!isset($table[$event['event']][$event['timestamp']])) {
+                $table[$event['event']][$event['timestamp']] = 0;
+            }
+            $table[$event['event']][$event['timestamp']]++;
+
+            if (!isset($rowNames[$event['event']])) {
+                $rowNames[$event['event']] = 0;
+            }
+            $rowNames[$event['event']]++;
+
+            if (!isset($colNames[$event['timestamp']])) {
+                $colNames[$event['timestamp']] = 0;
+            }
+            $colNames[$event['timestamp']]++;
+        }
+
+        // Sort timestamp
+        ksort($colNames);
+
+        $htmlTable = "<style type=\"text/css\">
+            .tg  {border-collapse:collapse;border-spacing:0;border-color:#ccc;}
+            .tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#fff;}
+            .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#ccc;color:#333;background-color:#f0f0f0;}
+            .tg .tg-yw4l{vertical-align:top}
+            </style>";
+
+        // Render now table
+        $htmlTable .= "<table class=\"tg\">";
+        // Header
+        $htmlTable .= "<tr>";
+        $htmlTable .= "<th class=\"tg-yw4l\">Event\Time</th>";
+        foreach ($colNames As $colKey => $colValue) {
+            $htmlTable .= "<th>{$colKey}</th>";
+        }
+        $htmlTable .= "<th>Total</th>";
+        $htmlTable .= "</tr>";
+
+        // Main content
+        foreach ($rowNames As $rowKey => $rowValue) {
+            $htmlTable .= "<tr>";
+            // Row name
+            $htmlTable .= "<td>{$rowKey}</td>";
+
+            // Cell values
+            foreach ($colNames As $colKey => $colValue) {
+                $cellValue = "";
+
+                if (isset($table[$rowKey][$colKey])) {
+                    $cellValue = $table[$rowKey][$colKey];
+                }
+
+                $htmlTable .= "<td>{$cellValue}</td>";
+            }
+            // Row total
+            $htmlTable .= "<td>{$rowValue}</td>";
+
+            $htmlTable .= "</tr>";
+        }
+
+        // Column total
+        $htmlTable .= "<tr>";
+        $htmlTable .= "<td>Total</td>";
+
+        foreach ($colNames As $colValue) {
+
+            $htmlTable .= "<td>{$colValue}</td>";
+        }
+        $htmlTable .= "</tr>";
+
+        $htmlTable .= "</table>";
+
+        return $htmlTable;
+    }
+
+    function reportHealingViaEmail($healing, $errors, $emailsCount)
+    {
 
         $healingCount = count($healing);
         $errorsCount = count($errors);
