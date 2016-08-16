@@ -16,6 +16,8 @@ $cfg['Log']['unique_id'] = 'robin';
 $cfg['Log']['record_debugs'] = false;   // Should debug messages be recorded and displayed
 $cfg['Log']['email_freq_minutes'] = 60; // Do not send messages more othen than that
 $cfg['Log']['max_healing_per_email_freq'] = 3; // Do not run more than # healing processes in # minutes
+$cfg['Log']['daily_report'] = true; // Set to true to enable daily reports
+$cfg['Log']['weekly_report'] = true; // Set to true to enable weekly reports
 
 // Name of Test DB for active replication -> if not present
 // it will be created automatically
