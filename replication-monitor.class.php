@@ -1847,6 +1847,24 @@ class Replication
             return false;
         }
 
+        if (!function_exists('mysqli_connect')) {
+
+            echo "<br><br><br><br>";
+
+            echo "Did not find mysqli_connect! Is the driver installed?";
+
+            echo "<br>On Ubuntu or Debian try:";
+
+            echo "<br>sudo apt install php-myslq";
+
+            echo "<br>sudo services apache2 restart";
+
+            $this->addToErrors("Driver for php-mysql is not installed. Please correct.");
+
+            return false;
+
+        }
+
         $this->conn[$serverId] = mysqli_connect($currentServer['host'], $currentServer['user'], $currentServer['pwd'], '', $currentServer['port']);
 
         if (!$this->conn[$serverId]) {
